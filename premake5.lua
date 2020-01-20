@@ -1,6 +1,6 @@
-workspace "OpenGL"
+workspace "AdvancedShaders"
 	architecture "x64"
-	startproject "OpenGL"
+	startproject "AdvancedShaders"
 	systemversion "latest"
 	cppdialect "C++17"
 
@@ -11,8 +11,8 @@ workspace "OpenGL"
 
 outputdir = "%{cfg.buildcfg}-%{cfg.system}"
 
-project "OpenGL"
-	location "OpenGL"
+project "AdvancedShaders"
+	location "AdvancedShaders"
 	kind "ConsoleApp"
 	language "C++"
 	staticruntime "off"
@@ -28,33 +28,24 @@ project "OpenGL"
 	files
 	{
 		"%{prj.name}/include/**.h",
-		"%{prj.name}/src/**.cpp",
-		"vendor/STB/stb_image.cpp"
+		"%{prj.name}/src/**.cpp"
 	}
 
 	includedirs
 	{
-		"vendor",
-		"vendor/GLFW/include",
-		"vendor/GLEW/include",
-		"vendor/GLM",
 		"%{prj.name}/include",
-		"vendor/ASSIMP/include"
+		"Dependancies/include/"
 	}
 	
 	libdirs 
 	{ 
-	"vendor/GLFW/lib", 
-	"vendor/GLEW/lib",
-	"vendor/ASSIMP/lib"
+		"Dependancies/include/"
 	}
 	
 	links 
 	{
 		"opengl32",
-		"GLFW3",
-		"glew32s",
-		"assimp"
+		"GLFW3"
 	}
 	
 	
