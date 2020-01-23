@@ -1,5 +1,5 @@
 workspace "AdvancedShaders"
-	architecture "x64"
+	architecture "x86"
 	startproject "AdvancedShaders"
 	systemversion "latest"
 	cppdialect "C++17"
@@ -16,9 +16,6 @@ project "AdvancedShaders"
 	kind "ConsoleApp"
 	language "C++"
 	staticruntime "off"
-
-	targetdir ("bin/" .. outputdir .. "/%{prj.name}")
-	objdir ("build/" .. outputdir .. "/%{prj.name}")
 	
 	defines
 	{
@@ -28,7 +25,8 @@ project "AdvancedShaders"
 	files
 	{
 		"%{prj.name}/include/**.h",
-		"%{prj.name}/src/**.cpp"
+		"%{prj.name}/src/**.cpp",
+		"%{prj.name}/src/**.c"
 	}
 
 	includedirs
@@ -39,13 +37,14 @@ project "AdvancedShaders"
 	
 	libdirs 
 	{ 
-		"Dependancies/include/"
+		"Dependancies/lib/"
 	}
 	
 	links 
 	{
 		"opengl32",
-		"GLFW3"
+		"GLFW3",
+		"assimp"
 	}
 	
 	

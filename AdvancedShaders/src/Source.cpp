@@ -27,6 +27,7 @@ void scroll_callback(GLFWwindow* window, double xoffset, double yoffset);
 void processInput(GLFWwindow *window);
 unsigned int loadTexture(char const * path);
 
+glm::vec3 lightPosition(0.0f, 10.0f, 5.0f);
 
 // camera
 Camera camera(glm::vec3(0, 1, 20));
@@ -83,8 +84,7 @@ int main()
 
 	// build and compile shaders
 	// -------------------------
-	Shader shader("..\\shaders\\plainVert.vs", "..\\shaders\\plainFrag.fs", "..\\shaders\\plainGeo.gs");
-	Shader shader2("..\\shaders\\plainVert.vs", "..\\shaders\\plainFrag.fs", "..\\shaders\\normalGeo.gs");
+	Shader shader("..\\shaders\\ToonShader\\toonVert.vs", "..\\shaders\\ToonShader\\toonFrag.fs");
 	//Model ourModel("..\\resources\\elephant\\elefante.obj");
 	Model ourModel("..\\resources\\nano\\nanosuit\\nanosuit.obj");
 
@@ -103,7 +103,7 @@ int main()
 		lastFrame = currentFrame;
 		processInput(window);
 
-		glClearColor(0.05f, 0.05f, 0.05f, 1.0f);
+		glClearColor(0.8f, 0.8f, 1.0f, 1.0f);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 		shader.use();
@@ -113,14 +113,9 @@ int main()
 		shader.setMat4("projection", projection);
 		shader.setMat4("view", view);
 		shader.setMat4("model", model);
+		shader.setVec3("light_Position", lightPosition);
 		//glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 		ourModel.Draw(shader);
-
-		shader2.use();
-		shader2.setMat4("projection", projection);
-		shader2.setMat4("view", view);
-		shader2.setMat4("model", model);
-		ourModel.Draw(shader2);
 
 		glfwSwapBuffers(window);
 		glfwPollEvents();
