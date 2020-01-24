@@ -17,6 +17,9 @@ project "AdvancedShaders"
 	language "C++"
 	staticruntime "off"
 	
+	targetdir ("bin/" .. outputdir .. "/%{prj.name}")
+	objdir ("build/" .. outputdir .. "/%{prj.name}")
+	
 	defines
 	{
 		"GLEW_STATIC"
