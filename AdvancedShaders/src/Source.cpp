@@ -24,10 +24,13 @@ const unsigned int SCR_HEIGHT = 900;
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
 void mouse_callback(GLFWwindow* window, double xpos, double ypos);
 void scroll_callback(GLFWwindow* window, double xoffset, double yoffset);
-void processInput(GLFWwindow *window);
-unsigned int loadTexture(char const * path);
+void processInput(GLFWwindow* window);
+unsigned int loadTexture(char const* path);
 
-glm::vec3 lightPosition(0.0f, 10.0f, 5.0f);
+glm::vec3 lightPosition1(1000.0f, 1000.0f, 1000.0f);
+glm::vec4 lightColour1(0.9f, 1.0f, 1.0f, 1.0f);
+glm::vec3 lightPosition2(-2.0f, 0.0f, 0.0f);
+glm::vec4 lightColour2(1.0f, 0.0f, 0.0f, 1.0f);
 
 // camera
 Camera camera(glm::vec3(0, 1, 20));
@@ -85,10 +88,9 @@ int main()
 	// build and compile shaders
 	// -------------------------
 	Shader shader("..\\shaders\\ToonShader\\toonVert.vs", "..\\shaders\\ToonShader\\toonFrag.fs");
+	Model ourModel("..\\resources\\nanosuit\\nanosuit.obj");
 	//Model ourModel("..\\resources\\elephant\\elefante.obj");
-	Model ourModel("..\\resources\\nano\\nanosuit\\nanosuit.obj");
-
-
+	//Model ourModel("..\\resources\\IcoSphere.obj");
 
 
 
@@ -103,7 +105,7 @@ int main()
 		lastFrame = currentFrame;
 		processInput(window);
 
-		glClearColor(0.8f, 0.8f, 1.0f, 1.0f);
+		glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 		shader.use();
@@ -113,7 +115,11 @@ int main()
 		shader.setMat4("projection", projection);
 		shader.setMat4("view", view);
 		shader.setMat4("model", model);
-		shader.setVec3("light_Position", lightPosition);
+		shader.setVec3("light_Position[0]", lightPosition1);
+		shader.setVec4("light_Colour[0]", lightColour1);
+		shader.setVec3("light_Position[1]", lightPosition2);
+		shader.setVec4("light_Colour[1]", lightColour2);
+		shader.setVec3("camera_Position", camera.Position);
 		//glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 		ourModel.Draw(shader);
 
@@ -126,7 +132,7 @@ int main()
 
 // process all input: query GLFW whether relevant keys are pressed/released this frame and react accordingly
 // ---------------------------------------------------------------------------------------------------------
-void processInput(GLFWwindow *window)
+void processInput(GLFWwindow* window)
 {
 	if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
 		glfwSetWindowShouldClose(window, true);
@@ -174,13 +180,13 @@ void scroll_callback(GLFWwindow* window, double xoffset, double yoffset)
 	camera.ProcessMouseScroll(yoffset);
 }
 
-unsigned int loadTexture(char const * path)
+unsigned int loadTexture(char const* path)
 {
 	unsigned int textureID;
 	glGenTextures(1, &textureID);
 
 	int width, height, nrComponents;
-	unsigned char *data = stbi_load(path, &width, &height, &nrComponents, 0);
+	unsigned char* data = stbi_load(path, &width, &height, &nrComponents, 0);
 	if (data)
 	{
 		GLenum format;
