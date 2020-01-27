@@ -30,7 +30,7 @@ unsigned int loadTexture(char const* path);
 glm::vec3 lightPosition1(1000.0f, 1000.0f, 1000.0f);
 glm::vec4 lightColour1(0.9f, 1.0f, 1.0f, 1.0f);
 glm::vec3 lightPosition2(0.0f, 0.0f, 0.0f);
-glm::vec4 lightColour2(1.0f, 0.0f, 0.0f, 1.0f);
+glm::vec4 lightColour2(0.0f, 0.0f, 0.0f, 1.0f);
 
 // camera
 Camera camera(glm::vec3(0, 1, 20));
@@ -91,6 +91,7 @@ int main()
 	// -------------------------
 	//Shader shader("..\\shaders\\LightingShader\\Diffuse.vs", "..\\shaders\\LightingShader\\Diffuse.fs");
 	Shader shader("..\\shaders\\ToonShader\\Toon.vs", "..\\shaders\\ToonShader\\Toon.fs");
+	//Shader shader("..\\shaders\\LowPoly\\LowPoly.vs", "..\\shaders\\LowPoly\\LowPoly.fs", "..\\shaders\\LowPoly\\LowPoly.gs");
 	Model ourModel("..\\resources\\nanosuit\\nanosuit.obj");
 	//Model ourModel("..\\resources\\elephant\\elefante.obj");
 	//Model ourModel("..\\resources\\IcoSphere.obj");

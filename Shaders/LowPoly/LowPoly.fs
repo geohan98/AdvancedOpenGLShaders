@@ -9,38 +9,29 @@ uniform vec4 light_Colour[numberOfLights];
 uniform sampler2D texture_diffuse1;
 uniform vec3 camera_Position;
 
-in vec2 vTexCoords;
-in vec3 vNormal;
-in vec3 vFragPosition;
+in vec2 gTexCoords;
+in vec3 gNormal;
+in vec3 gFragPosition;
 
 
 
 void main()
 {   
 	vec4 colour;
-	vec3 normal = normalize(vNormal);
-	vec3 viewDir = normalize(camera_Position - vFragPosition);
+	vec3 normal = normalize(gNormal);
+	vec3 viewDir = normalize(camera_Position - gFragPosition);
 	
 	for (int i = 0; i < numberOfLights; i++)
 	{
-		vec3 lightDir = normalize(light_Position[i] - vFragPosition);
+		vec3 lightDir = normalize(light_Position[i] - gFragPosition);
 		
 		//Diffuse
 		float diffuseStrength = max(dot(normal,lightDir),0.0);
-
-		if(diffuseStrength > 0.25)
-		{
-		diffuseStrength = 1.0;
-		}
-		else
-		{
-		diffuseStrength = 0.15;
-		}
-
-		vec4 diffuse = light_Colour[i] * diffuseStrength;
+		
+		vec4 diffuse = texture2D(texture_diffuse1,gTexCoords) * light_Colour[i] * diffuseStrength;
 		
 		//Specular
-		vec3 lightReflectDir = reflect(-lightDir, vNormal);
+		vec3 lightReflectDir = reflect(-lightDir, gNormal);
 		float specStrength = pow(max(dot(viewDir, lightReflectDir), 0.0), 32);
 		
 		vec4 specular = light_Colour[i] * specStrength;
