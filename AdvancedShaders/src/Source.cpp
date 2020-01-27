@@ -29,7 +29,7 @@ unsigned int loadTexture(char const* path);
 
 glm::vec3 lightPosition1(1000.0f, 1000.0f, 1000.0f);
 glm::vec4 lightColour1(0.9f, 1.0f, 1.0f, 1.0f);
-glm::vec3 lightPosition2(-2.0f, 0.0f, 0.0f);
+glm::vec3 lightPosition2(0.0f, 0.0f, 0.0f);
 glm::vec4 lightColour2(1.0f, 0.0f, 0.0f, 1.0f);
 
 // camera
@@ -41,6 +41,8 @@ bool firstMouse = true;
 // timing
 float deltaTime = 0.0f;
 float lastFrame = 0.0f;
+
+unsigned int VMMatrices;
 
 int main()
 {
@@ -87,12 +89,21 @@ int main()
 
 	// build and compile shaders
 	// -------------------------
-	Shader shader("..\\shaders\\ToonShader\\toonVert.vs", "..\\shaders\\ToonShader\\toonFrag.fs");
+	//Shader shader("..\\shaders\\LightingShader\\Diffuse.vs", "..\\shaders\\LightingShader\\Diffuse.fs");
+	Shader shader("..\\shaders\\ToonShader\\Toon.vs", "..\\shaders\\ToonShader\\Toon.fs");
 	Model ourModel("..\\resources\\nanosuit\\nanosuit.obj");
 	//Model ourModel("..\\resources\\elephant\\elefante.obj");
 	//Model ourModel("..\\resources\\IcoSphere.obj");
+	//Model ourModel("..\\resources\\Bullet.obj");
 
+	//UBOs
+	glGenBuffers(1, &VMMatrices);
+	glBindBuffer(GL_UNIFORM_BUFFER, VMMatrices);
+	glBufferData(GL_UNIFORM_BUFFER, 2 * sizeof(glm::mat4), NULL, GL_DYNAMIC_DRAW);
+	glBindBufferBase(GL_UNIFORM_BUFFER, 1, VMMatrices);
 
+	unsigned int VMMatricesIndex = glGetUniformBlockIndex(shader.ID, "u_VMMatrices");
+	glUniformBlockBinding(shader.ID, VMMatricesIndex, 1);
 
 
 	// render loop
@@ -111,9 +122,13 @@ int main()
 		shader.use();
 		glm::mat4 projection = glm::perspective(glm::radians(camera.Zoom), (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 300.0f);
 		glm::mat4 view = camera.GetViewMatrix();
-		glm::mat4 model = glm::mat4(1.0f);
+
+		glBindBuffer(GL_UNIFORM_BUFFER, VMMatrices);
+		glBufferSubData(GL_UNIFORM_BUFFER, 0, sizeof(glm::mat4), (void*)&projection);
+		glBufferSubData(GL_UNIFORM_BUFFER, sizeof(glm::mat4), sizeof(glm::mat4), (void*)&view);
 		shader.setMat4("projection", projection);
 		shader.setMat4("view", view);
+		glm::mat4 model = glm::mat4(1.0f);
 		shader.setMat4("model", model);
 		shader.setVec3("light_Position[0]", lightPosition1);
 		shader.setVec4("light_Colour[0]", lightColour1);
