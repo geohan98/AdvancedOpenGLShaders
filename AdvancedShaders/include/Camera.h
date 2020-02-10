@@ -18,7 +18,7 @@ enum Camera_Movement {
 // Default camera values
 const float YAW = -90.0f;
 const float PITCH = 0.0f;
-const float SPEED = 2.5f;
+const float SPEED = 52.5f;
 const float SENSITIVITY = 0.1f;
 const float ZOOM = 45.0f;
 
@@ -62,7 +62,7 @@ public:
 
 	void printCameraCoords() {
 		std::cout << Position.x << " " << Position.y << " " << Position.z << std::endl;
-		//std::cout << Yaw << ": yaw " << Pitch << ": pitch  " << std::endl;
+		std::cout << Yaw << ": yaw " << Pitch << ": pitch  " << std::endl;
 	}
 
 	// Returns the view matrix calculated using Euler Angles and the LookAt Matrix

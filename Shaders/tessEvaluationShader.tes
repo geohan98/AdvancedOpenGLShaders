@@ -16,10 +16,8 @@ uniform mat4 projection;
 
 // read in vector arrays from previous shader
 in vec3 posTC[] ;
-in vec3 normTC[] ;
 
 // pass along the interpolated values
-out vec3 normES ;
 out vec3 posES ;
 
 
@@ -29,7 +27,6 @@ void main()
     // interpolate the normal and xyz position using the linear interpolation function
     // use 3D because they are in three dimensions; 2D also included for uv texture coordinates
 
-   normES = interpolate3D(normTC[0], normTC[1], normTC[2]) ;
    posES = interpolate3D(posTC[0], posTC[1], posTC[2]) ;
 
    // transform vertex to clip space  - NOTE: WE NEED TO DO IT HERE NOW and not in vertex shader

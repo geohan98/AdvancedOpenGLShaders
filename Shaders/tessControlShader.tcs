@@ -10,16 +10,28 @@ layout (vertices =3) out;
 // vectors stored as arrays - each patch has three vertices, each with an xyz pos and xyz norm value 
 //posVS = position from Vertex Shader, posTC = position from this Tesselation Control shader
 
-in vec3 posVS[] ;
-in vec3 normVS[] ;
+uniform vec3 viewPos ;
 
+in vec3 posVS[] ;
 out vec3 posTC[] ;
-out vec3 normTC[] ;
+
+
+
 
 void main()
 {
-  // tesselation level; we wil find this automatically later but for now hardcoded value
-   int tessLevel = 16;
+	// tesselation level; we wil find this automatically later but for now hardcoded value
+	int tessLevel = 1;
+   
+	float dist1 = distance(viewPos,posVS[0]);
+	float dist2 = distance(viewPos,posVS[1]);
+	float dist3 = distance(viewPos,posVS[2]);
+	
+	float avgDist = (dist1 + dist2 + dist3) / 3;
+	
+	if(avgDist < 250) tessLevel = 5;
+	if(avgDist < 100) tessLevel = 10;
+
 
    // gpu can calculate each control point in parallel
    // tesselation level same for entire patch so only need to set it once (for the first control point)
@@ -36,6 +48,5 @@ void main()
 
    // pass through position and normal information
    posTC[gl_InvocationID]  = posVS[gl_InvocationID] ;
-   normTC[gl_InvocationID] = normVS[gl_InvocationID] ;
 
 }
