@@ -13,7 +13,10 @@ layout (vertices =3) out;
 uniform vec3 viewPos ;
 
 in vec3 posVS[] ;
+in vec2 texCorrdsVS[];
+
 out vec3 posTC[] ;
+out vec2 texCorrdsTC[];
 
 
 
@@ -29,8 +32,8 @@ void main()
 	
 	float avgDist = (dist1 + dist2 + dist3) / 3;
 	
-	if(avgDist < 250) tessLevel = 5;
-	if(avgDist < 100) tessLevel = 10;
+	if(avgDist < 250) tessLevel = 1;
+	if(avgDist < 100) tessLevel = 1;
 
 
    // gpu can calculate each control point in parallel
@@ -48,5 +51,5 @@ void main()
 
    // pass through position and normal information
    posTC[gl_InvocationID]  = posVS[gl_InvocationID] ;
-
+   texCorrdsTC[gl_InvocationID] = texCorrdsVS[gl_InvocationID];
 }

@@ -41,6 +41,12 @@ bool firstMouse = true;
 //arrays
 unsigned int VBO, VAO;
 
+unsigned int heightMap;
+std::string heightMapPath = "..\\resources\\heightmap.jpg";
+float heightMapScale = 100;
+
+glm::vec3 lightPos = glm::vec3(5.0f, 100.0f, 0.0f);
+
 // timing
 float deltaTime = 0.0f;
 float lastFrame = 0.0f;
@@ -74,7 +80,11 @@ int main()
 	glCullFace(GL_BACK);
 
 	// simple vertex and fragment shader - add your own tess and geo shader
-	Shader tess("..\\shaders\\tessVert.vs", "..\\shaders\\plainFrag.fs", "..\\shaders\\Norms.gs", "..\\shaders\\tessControlShader.tcs", "..\\shaders\\tessEvaluationShader.tes");
+	Shader tess("..\\shaders\\tessVert.vs", "..\\shaders\\tessFrag.fs", "..\\shaders\\Norms.gs", "..\\shaders\\tessControlShader.tcs", "..\\shaders\\tessEvaluationShader.tes");
+	tess.use();
+	tess.setVec3("lightPos", lightPos);
+
+	Shader normals("..\\Shaders\\DebugNormals\\debugNormals.vs", "..\\Shaders\\DebugNormals\\debugNormals.fs", "..\\Shaders\\DebugNormals\\debugNormals.gs");
 
 
 	//Terrain Constructor ; number of grids in width, number of grids in height, gridSize
@@ -83,7 +93,9 @@ int main()
 	setVAO(vertices);
 
 
-
+	heightMap = loadTexture(heightMapPath.c_str());
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_2D,heightMap);
 
 	while (!glfwWindowShouldClose(window))
 	{
@@ -104,10 +116,19 @@ int main()
 		tess.setMat4("projection", projection);
 		tess.setMat4("view", view);
 		tess.setMat4("model", model);
-		tess.setMat4("model", model);
 		tess.setVec3("viewPos", camera.Position);
-		glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+		tess.setFloat("heightMapScale", heightMapScale);
+		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 		glDrawArrays(GL_PATCHES, 0, vertices.size() / 3);
+
+		normals.use();
+		normals.setMat4("projection", projection);
+		normals.setMat4("view", view);
+		normals.setMat4("model", model);
+		normals.setFloat("heightMapScale", heightMapScale);
+
+		glDrawArrays(GL_TRIANGLES, 0, vertices.size() / 3);
+
 		if (glfwGetKey(window, GLFW_KEY_P) == GLFW_PRESS)
 			camera.printCameraCoords();
 
