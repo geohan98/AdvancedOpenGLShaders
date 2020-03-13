@@ -80,11 +80,10 @@ int main()
 	glCullFace(GL_BACK);
 
 	// simple vertex and fragment shader - add your own tess and geo shader
-	Shader tess("..\\shaders\\tessVert.vs", "..\\shaders\\tessFrag.fs", "..\\shaders\\Norms.gs", "..\\shaders\\tessControlShader.tcs", "..\\shaders\\tessEvaluationShader.tes");
+	Shader tess("..\\shaders\\Terrain\\tessVert.vs", "..\\shaders\\Terrain\\tessFrag.fs", "..\\shaders\\Terrain\\Norms.gs", "..\\shaders\\Terrain\\tessControlShader.tcs", "..\\shaders\\tessEvaluationShader.tes");
 	tess.use();
 	tess.setVec3("lightPos", lightPos);
-
-	Shader normals("..\\Shaders\\DebugNormals\\debugNormals.vs", "..\\Shaders\\DebugNormals\\debugNormals.fs", "..\\Shaders\\DebugNormals\\debugNormals.gs");
+	tess.setFloat("fogDistance",500);
 
 
 	//Terrain Constructor ; number of grids in width, number of grids in height, gridSize
@@ -120,14 +119,6 @@ int main()
 		tess.setFloat("heightMapScale", heightMapScale);
 		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 		glDrawArrays(GL_PATCHES, 0, vertices.size() / 3);
-
-		normals.use();
-		normals.setMat4("projection", projection);
-		normals.setMat4("view", view);
-		normals.setMat4("model", model);
-		normals.setFloat("heightMapScale", heightMapScale);
-
-		glDrawArrays(GL_TRIANGLES, 0, vertices.size() / 3);
 
 		if (glfwGetKey(window, GLFW_KEY_P) == GLFW_PRESS)
 			camera.printCameraCoords();
