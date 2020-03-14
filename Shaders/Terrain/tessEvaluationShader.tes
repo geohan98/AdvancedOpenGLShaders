@@ -25,7 +25,7 @@ void main()
 	vec3 fragPos = interpolate3D(posTC[0], posTC[1], posTC[2]);
 	fragPosES = fragPos;
 	vec2 texCoords = interpolate2D(texCorrdsTC[0],texCorrdsTC[1],texCorrdsTC[2]);
-	fragPos.y = texture(heightMap,texCoords).x * heightMapScale;
+	fragPos.y = 0 + texture(heightMap,texCoords).x * heightMapScale;
    
 	gl_Position = projection * view * model* vec4(fragPos, 1.0);
 	

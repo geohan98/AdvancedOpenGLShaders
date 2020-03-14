@@ -32,8 +32,7 @@ void main()
 	
 	float avgDist = (dist1 + dist2 + dist3) / 3;
 	
-	if(avgDist < 500) tessLevel = 4;
-	if(avgDist < 250) tessLevel = 8;
+	if (avgDist < 200) tessLevel = 10;
 
 
    // gpu can calculate each control point in parallel

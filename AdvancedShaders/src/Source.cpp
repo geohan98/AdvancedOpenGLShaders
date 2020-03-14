@@ -22,30 +22,54 @@
 // settings
 const unsigned int SCR_WIDTH = 1200;
 const unsigned int SCR_HEIGHT = 900;
-glm::vec3 dirLightPos(0.1f, 0.6f, 0.2f);
 
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
 void mouse_callback(GLFWwindow* window, double xpos, double ypos);
 void scroll_callback(GLFWwindow* window, double xoffset, double yoffset);
-void processInput(GLFWwindow *window);
-unsigned int loadTexture(char const * path);
+void processInput(GLFWwindow* window);
+unsigned int loadTexture(char const* path);
 //unsigned int loadTexture2(char const * path);
 void setVAO(vector <float> vertices);
 
 // camera
-Camera camera(glm::vec3(260, 50, 300));
+Camera camera(glm::vec3(0, 0, 0));
 float lastX = SCR_WIDTH / 2.0f;
 float lastY = SCR_HEIGHT / 2.0f;
 bool firstMouse = true;
 
+//Light
+glm::vec3 lightPos = glm::vec3(2.5f, 10.0f, 2.5f);
+
+//Light Strength
+float ambient = 0.01;
+float diffuse = 1.0;
+float specular = 1.0;
+
+//ClearColor & Fog
+glm::vec3 clearColor = glm::vec3(0.85f, 0.9f, 1.0f);
+float fogNear = 100000;
+float fogFar = 200000;
+
+//Water
+unsigned int waterTex;
+glm::vec3 waterColour = glm::vec3(0.6, 0.8, 9.0);
+float waterSpeedX = 0.0;
+float waterSpeedY = 0.001;
+float waterScale = 100.0;
+std::string waterNormalPath = "..\\Resources\\Textures\\waterNormal.jpg";
+
 //arrays
 unsigned int VBO, VAO;
 
+//Terrain
+int sizeX = 101;
+int sizeY = 101;
+int stepSize = 1;
 unsigned int heightMap;
 std::string heightMapPath = "..\\resources\\heightmap.jpg";
-float heightMapScale = 100;
+float heightMapScale = 1;
 
-glm::vec3 lightPos = glm::vec3(5.0f, 100.0f, 0.0f);
+
 
 // timing
 float deltaTime = 0.0f;
@@ -79,26 +103,31 @@ int main()
 	glEnable(GL_CULL_FACE);
 	glCullFace(GL_BACK);
 
+
 	// simple vertex and fragment shader - add your own tess and geo shader
 	Shader tess("..\\shaders\\Terrain\\tessVert.vs", "..\\shaders\\Terrain\\tessFrag.fs", "..\\shaders\\Terrain\\Norms.gs", "..\\shaders\\Terrain\\tessControlShader.tcs", "..\\shaders\\tessEvaluationShader.tes");
 	tess.use();
 	tess.setVec3("lightPos", lightPos);
-	tess.setFloat("fogDistance",500);
 
+	heightMap = loadTexture(heightMapPath.c_str());
 
 	//Terrain Constructor ; number of grids in width, number of grids in height, gridSize
-	Terrain terrain(50, 50, 10);
+	Terrain terrain(sizeX, sizeY, stepSize);
 	std::vector<float> vertices = terrain.getVertices();
 	setVAO(vertices);
 
 
-	heightMap = loadTexture(heightMapPath.c_str());
-	glActiveTexture(GL_TEXTURE0);
-	glBindTexture(GL_TEXTURE_2D,heightMap);
+
+	//Water
+	Model water = Model("..\\Resources\\plane.obj");
+	Shader waterShader = Shader("..\\shaders\\Water\\water.vs", "..\\shaders\\Water\\water.fs");
+	waterTex = loadTexture(waterNormalPath.c_str());
+
+
 
 	while (!glfwWindowShouldClose(window))
 	{
-
+		glClearColor(clearColor.x, clearColor.y, clearColor.z, 1.0f);
 		float currentFrame = glfwGetTime();
 		deltaTime = currentFrame - lastFrame;
 		lastFrame = currentFrame;
@@ -107,21 +136,52 @@ int main()
 
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-		glBindVertexArray(VAO);
 		glm::mat4 projection = glm::perspective(glm::radians(camera.Zoom), (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 1200.0f);
 		glm::mat4 view = camera.GetViewMatrix();
-		glm::mat4 model = glm::mat4(1.0f);
+		glm::mat4 model;
+
+		if (glfwGetKey(window, GLFW_KEY_P) == GLFW_PRESS)
+			camera.printCameraCoords();
+
+		//Water
+		glBindTexture(GL_TEXTURE_2D, waterTex);
+		model = glm::translate(glm::mat4(1.0f), glm::vec3(0, 0, 0));
+		model = glm::scale(model, glm::vec3((sizeX - 1) * (stepSize / 2), 1, (sizeY - 1) * (stepSize / 2)));
+		waterShader.use();
+		waterShader.setMat4("projection", projection);
+		waterShader.setMat4("view", view);
+		waterShader.setMat4("model", model);
+
+		waterShader.setVec3("u_viewPos", camera.Position);
+
+		waterShader.setVec3("u_lightPos", lightPos);
+		waterShader.setVec3("u_lightColor", clearColor);
+
+		waterShader.setFloat("u_ambientStrength", ambient);
+		waterShader.setFloat("u_diffuseStrength", diffuse);
+		waterShader.setVec3("u_colour", waterColour);
+		waterShader.setFloat("u_Time", glfwGetTime());
+		waterShader.setFloat("u_waterSpeedX", waterSpeedX);
+		waterShader.setFloat("u_waterSpeedY", waterSpeedY);
+		waterShader.setFloat("u_Scale", waterScale);
+		water.Draw(waterShader);
+
+		//Terrain
+		model = glm::mat4(1.0f);
+		model = glm::translate(model, glm::vec3(-(((sizeX - 1) * stepSize) / 2), -1, -(((sizeY - 1) * stepSize) / 2)));
+		glBindVertexArray(VAO);
+		glBindTexture(GL_TEXTURE_2D, heightMap);
 		tess.use();
 		tess.setMat4("projection", projection);
 		tess.setMat4("view", view);
 		tess.setMat4("model", model);
 		tess.setVec3("viewPos", camera.Position);
 		tess.setFloat("heightMapScale", heightMapScale);
+		tess.setVec3("fogColor", clearColor);
+		tess.setFloat("fogNear", fogNear);
+		tess.setFloat("fogFar", fogFar);
 		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 		glDrawArrays(GL_PATCHES, 0, vertices.size() / 3);
-
-		if (glfwGetKey(window, GLFW_KEY_P) == GLFW_PRESS)
-			camera.printCameraCoords();
 
 		glfwSwapBuffers(window);
 		glfwPollEvents();
@@ -134,7 +194,7 @@ int main()
 
 // process all input: query GLFW whether relevant keys are pressed/released this frame and react accordingly
 // ---------------------------------------------------------------------------------------------------------
-void processInput(GLFWwindow *window)
+void processInput(GLFWwindow* window)
 {
 	if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
 		glfwSetWindowShouldClose(window, true);
@@ -177,9 +237,6 @@ void mouse_callback(GLFWwindow* window, double xpos, double ypos)
 }
 
 
-
-
-
 // glfw: whenever the mouse scroll wheel scrolls, this callback is called
 // ----------------------------------------------------------------------
 void scroll_callback(GLFWwindow* window, double xoffset, double yoffset)
@@ -187,13 +244,13 @@ void scroll_callback(GLFWwindow* window, double xoffset, double yoffset)
 	camera.ProcessMouseScroll(yoffset);
 }
 
-unsigned int loadTexture(char const * path)
+unsigned int loadTexture(char const* path)
 {
 	unsigned int textureID;
 	glGenTextures(1, &textureID);
 
 	int width, height, nrComponents;
-	unsigned char *data = stbi_load(path, &width, &height, &nrComponents, 0);
+	unsigned char* data = stbi_load(path, &width, &height, &nrComponents, 0);
 	if (data)
 	{
 		GLenum format;
