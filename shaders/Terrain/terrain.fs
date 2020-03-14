@@ -20,8 +20,27 @@ float calcAlphaBetween(float x, float a, float b);
 
 void main()
 {
-	float a = calcAlphaBetween(heightGS,-1,1);
-	vec3 colour = mix(vec3(0,0.5,1),vec3(0,1,0.75),a);
+	float a;
+	vec3 colour;
+	float v = max(dot(normalGS,vec3(0,1,0)),0.0);
+	
+	if(v < 0.5) 
+	{
+		colour = glm::vec3(0.2,0.2,0.2);
+	}
+	else
+	{
+		if(heightGS > 0.75) 
+		{
+		a = clamp(calcAlphaBetween(heightGS,0.75,1),0,1);
+		colour = mix(vec3(0.1,0.6,0.1),vec3(0.8,0.8,0.8),a);
+		}
+		else
+		{
+		a = clamp(calcAlphaBetween(heightGS,-1,0.75),0,1);
+		colour = mix(vec3(1.0,0.0,0.0),vec3(0.1,0.6,0.1),a);
+		}
+	}
 	
 	//Ambient
 	vec3 ambient = u_ambientStrength * colour;
@@ -32,10 +51,10 @@ void main()
 	//Speccular
 	vec3 viewDir = normalize(u_viewPos - fragPosGS);
 	vec3 reflectDir = reflect(-lightDir, normalGS);
-	float specDot = pow(max(dot(viewDir, reflectDir), 0.0), 512);
+	float specDot = pow(max(dot(viewDir, reflectDir), 0.0), 16);
 	vec3 specular = u_specularStrength * specDot * u_lightColor;
 	//Result 
-	FragColor = vec4(ambient + diffuse + specular,1.0);
+	FragColor = vec4(ambient + diffuse,1.0);
 }
 
 float calcAlphaBetween(float x, float a, float b)

@@ -17,63 +17,59 @@
 #include <iostream>
 #include <numeric>
 
-
-
-// settings
+//Window Settings
 const unsigned int SCR_WIDTH = 1200;
 const unsigned int SCR_HEIGHT = 900;
-
+//Functions
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
 void mouse_callback(GLFWwindow* window, double xpos, double ypos);
 void scroll_callback(GLFWwindow* window, double xoffset, double yoffset);
 void processInput(GLFWwindow* window);
 unsigned int loadTexture(char const* path);
-//unsigned int loadTexture2(char const * path);
 void setVAO(vector <float> vertices);
-
-// camera
-Camera camera(glm::vec3(0, 0, 0));
+//Timing
+float deltaTime = 0.0f;
+float lastFrame = 0.0f;
+//Camera
+Camera camera(glm::vec3(135, 30, -150));
 float lastX = SCR_WIDTH / 2.0f;
 float lastY = SCR_HEIGHT / 2.0f;
 bool firstMouse = true;
-
-//Light
-glm::vec3 lightPos = glm::vec3(2.5f, 10.0f, 2.5f);
-
-//Light Strength
-float ambient = 0.01;
-float diffuse = 1.0;
-float specular = 1.0;
-
-//ClearColor & Fog
-glm::vec3 clearColor = glm::vec3(0.85f, 0.9f, 1.0f);
-float fogNear = 100000;
-float fogFar = 200000;
-
+//Lighting
+glm::vec3 lightPos = glm::vec3(1000.0, 1000.0, 1000.0);
+glm::vec3 lightColour = glm::vec3(1.0, 1.0, 1.0);
+float ambientStrength = 0.4;
+float diffuseStrength = 1.0;
+float specularStrength = 1.0;
+//Skybox
+unsigned int skyboxTex;
+std::string skyboxPath = "..\\resources\\textures\\skybox\\";
+std::vector<std::string> faces =
+{
+	"right.jpg",
+	"left.jpg",
+	"top.jpg",
+	"bottom.jpg",
+	"front.jpg",
+	"back.jpg"
+};
 //Water
-unsigned int waterTex;
-glm::vec3 waterColour = glm::vec3(0.6, 0.8, 9.0);
-float waterSpeedX = 0.0;
-float waterSpeedY = 0.001;
-float waterScale = 100.0;
-std::string waterNormalPath = "..\\Resources\\Textures\\waterNormal.jpg";
-
-//arrays
-unsigned int VBO, VAO;
-
+unsigned int waterHeightMap;
+unsigned int waterHeightMap2;
+float waterScale = 25.0;
+float waveHeight = 8.0;
+float waterSpeedX = -0.1;
+float waterSpeedY = 0.1;
+float waterHeightTile = 5.0;
+float waterHeightTile2 = 5.0;
 //Terrain
-int sizeX = 101;
-int sizeY = 101;
-int stepSize = 1;
-unsigned int heightMap;
-std::string heightMapPath = "..\\resources\\heightmap.jpg";
-float heightMapScale = 1;
+unsigned int terrainHeightMap;
+unsigned int terrainHeightMap2;
+float terrainHeightScale = 100.0;
+float terrainHeightTile = 1.0;
+float terrainHeightTile2 = 1.0;
 
-
-
-// timing
-float deltaTime = 0.0f;
-float lastFrame = 0.0f;
+unsigned int VAO, VBO;
 
 int main()
 {
@@ -104,85 +100,122 @@ int main()
 	glCullFace(GL_BACK);
 
 
-	// simple vertex and fragment shader - add your own tess and geo shader
-	Shader tess("..\\shaders\\Terrain\\tessVert.vs", "..\\shaders\\Terrain\\tessFrag.fs", "..\\shaders\\Terrain\\Norms.gs", "..\\shaders\\Terrain\\tessControlShader.tcs", "..\\shaders\\tessEvaluationShader.tes");
-	tess.use();
-	tess.setVec3("lightPos", lightPos);
-
-	heightMap = loadTexture(heightMapPath.c_str());
-
-	//Terrain Constructor ; number of grids in width, number of grids in height, gridSize
-	Terrain terrain(sizeX, sizeY, stepSize);
-	std::vector<float> vertices = terrain.getVertices();
-	setVAO(vertices);
-
-
+	//Skybox
+	Model skyboxModel = Model("..\\resources\\cube.obj");
+	Shader skyboxShader("..\\shaders\\skybox\\skybox.vs", "..\\shaders\\skybox\\skybox.fs");
+	glGenTextures(1, &skyboxTex);
+	glBindTexture(GL_TEXTURE_CUBE_MAP, skyboxTex);
+	int width, height, channels;
+	for (int i = 0; i < 6; i++)
+	{
+		unsigned char* data = stbi_load((skyboxPath + faces[i]).c_str(), &width, &height, &channels, 0);
+		if (data)
+		{
+			glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
+			stbi_image_free(data);
+		}
+		else
+		{
+			std::cout << "Failed to Load Texture" << (skyboxPath + faces[i]).c_str() << std::endl;
+		}
+	}
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+	glBindTexture(GL_TEXTURE_CUBE_MAP, 0);
 
 	//Water
-	Model water = Model("..\\Resources\\plane.obj");
-	Shader waterShader = Shader("..\\shaders\\Water\\water.vs", "..\\shaders\\Water\\water.fs");
-	waterTex = loadTexture(waterNormalPath.c_str());
-
-
+	Model waterModel = Model("..\\resources\\hiPolyPlane.obj");
+	Shader waterShader = Shader("..\\shaders\\water\\water.vs", "..\\shaders\\water\\water.fs", "..\\shaders\\water\\water.gs", "..\\shaders\\water\\water.tcs", "..\\shaders\\water\\water.tes");
+	waterHeightMap = loadTexture("..\\resources\\textures\\water\\height.jpg");
+	waterHeightMap2 = loadTexture("..\\resources\\textures\\water\\height2.jpg");
+	//Terrain
+	Terrain terrain = Terrain(251, 251, 10);
+	std::vector<float> vertices = terrain.getVertices();
+	setVAO(vertices);
+	Shader terrainShader = Shader("..\\shaders\\terrain\\terrain.vs", "..\\shaders\\terrain\\terrain.fs", "..\\shaders\\terrain\\terrain.gs", "..\\shaders\\terrain\\terrain.tcs", "..\\shaders\\terrain\\terrain.tes");
+	terrainHeightMap = loadTexture("..\\resources\\textures\\Terrain\\height.jpg");
+	terrainHeightMap2 = loadTexture("..\\resources\\textures\\Terrain\\height2.jpg");
 
 	while (!glfwWindowShouldClose(window))
 	{
-		glClearColor(clearColor.x, clearColor.y, clearColor.z, 1.0f);
+		glm::mat4 projection = glm::perspective(glm::radians(camera.Zoom), (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 5000.0f);
+		glm::mat4 view = camera.GetViewMatrix();
+		glm::mat4 skyboxView = glm::mat4(glm::mat3(camera.GetViewMatrix()));
+
+		//Timing
 		float currentFrame = glfwGetTime();
 		deltaTime = currentFrame - lastFrame;
 		lastFrame = currentFrame;
-
+		//Input
 		processInput(window);
-
-		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-		glm::mat4 projection = glm::perspective(glm::radians(camera.Zoom), (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 1200.0f);
-		glm::mat4 view = camera.GetViewMatrix();
-		glm::mat4 model;
-
 		if (glfwGetKey(window, GLFW_KEY_P) == GLFW_PRESS)
 			camera.printCameraCoords();
-
-		//Water
-		glBindTexture(GL_TEXTURE_2D, waterTex);
-		model = glm::translate(glm::mat4(1.0f), glm::vec3(0, 0, 0));
-		model = glm::scale(model, glm::vec3((sizeX - 1) * (stepSize / 2), 1, (sizeY - 1) * (stepSize / 2)));
-		waterShader.use();
-		waterShader.setMat4("projection", projection);
-		waterShader.setMat4("view", view);
-		waterShader.setMat4("model", model);
-
-		waterShader.setVec3("u_viewPos", camera.Position);
-
-		waterShader.setVec3("u_lightPos", lightPos);
-		waterShader.setVec3("u_lightColor", clearColor);
-
-		waterShader.setFloat("u_ambientStrength", ambient);
-		waterShader.setFloat("u_diffuseStrength", diffuse);
-		waterShader.setVec3("u_colour", waterColour);
-		waterShader.setFloat("u_Time", glfwGetTime());
-		waterShader.setFloat("u_waterSpeedX", waterSpeedX);
-		waterShader.setFloat("u_waterSpeedY", waterSpeedY);
-		waterShader.setFloat("u_Scale", waterScale);
-		water.Draw(waterShader);
-
-		//Terrain
-		model = glm::mat4(1.0f);
-		model = glm::translate(model, glm::vec3(-(((sizeX - 1) * stepSize) / 2), -1, -(((sizeY - 1) * stepSize) / 2)));
-		glBindVertexArray(VAO);
-		glBindTexture(GL_TEXTURE_2D, heightMap);
-		tess.use();
-		tess.setMat4("projection", projection);
-		tess.setMat4("view", view);
-		tess.setMat4("model", model);
-		tess.setVec3("viewPos", camera.Position);
-		tess.setFloat("heightMapScale", heightMapScale);
-		tess.setVec3("fogColor", clearColor);
-		tess.setFloat("fogNear", fogNear);
-		tess.setFloat("fogFar", fogFar);
+		//Clear Window
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-		glDrawArrays(GL_PATCHES, 0, vertices.size() / 3);
+		//Skybox
+		glDepthMask(GL_FALSE);
+		skyboxShader.use();
+		skyboxShader.setMat4("u_view", skyboxView);
+		skyboxShader.setMat4("u_projection", projection);
+		glActiveTexture(GL_TEXTURE0);
+		glBindTexture(GL_TEXTURE_CUBE_MAP, skyboxTex);
+		skyboxModel.Draw(skyboxShader);
+		glDepthMask(GL_TRUE);
+		//Water
 
+		glm::mat4 waterModelMat = glm::scale(glm::mat4(1.0), glm::vec3(waterScale, 1, waterScale));
+		waterShader.use();
+		waterShader.setMat4("u_model", waterModelMat);
+		waterShader.setMat4("u_view", view);
+		waterShader.setMat4("u_projection", projection);
+		waterShader.setFloat("u_ambientStrength", ambientStrength);
+		waterShader.setFloat("u_diffuseStrength", diffuseStrength);
+		waterShader.setFloat("u_specularStrength", specularStrength);
+		waterShader.setVec3("u_lightPos", lightPos);
+		waterShader.setVec3("u_lightColor", lightColour);
+		waterShader.setVec3("u_viewPos", camera.Position);
+		waterShader.setFloat("u_waveHeight", waveHeight);
+		waterShader.setFloat("u_time", glfwGetTime());
+		waterShader.setFloat("u_speedX", waterSpeedX);
+		waterShader.setFloat("u_speedY", waterSpeedY);
+		waterShader.setInt("u_heightMap", 0);
+		waterShader.setFloat("u_heightTile", waterHeightTile);
+		waterShader.setInt("u_heightMap2", 1);
+		waterShader.setFloat("u_heightTile2", waterHeightTile2);
+		glActiveTexture(GL_TEXTURE0);
+		glBindTexture(GL_TEXTURE_2D, waterHeightMap);
+		glActiveTexture(GL_TEXTURE1);
+		glBindTexture(GL_TEXTURE_2D, waterHeightMap2);
+		waterModel.DrawTess(waterShader);
+		//Terrain
+		//glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+		glm::mat4 terrainModelMat = glm::translate(glm::mat4(1.0), glm::vec3(-1250, 60, -1250));
+		terrainShader.use();
+		terrainShader.setMat4("u_model", terrainModelMat);
+		terrainShader.setMat4("u_view", view);
+		terrainShader.setMat4("u_projection", projection);
+		terrainShader.setFloat("u_ambientStrength", ambientStrength);
+		terrainShader.setFloat("u_diffuseStrength", diffuseStrength);
+		terrainShader.setFloat("u_specularStrength", specularStrength);
+		terrainShader.setVec3("u_lightPos", lightPos);
+		terrainShader.setVec3("u_lightColor", lightColour);
+		terrainShader.setVec3("u_viewPos", camera.Position);
+		terrainShader.setFloat("u_heightScale", terrainHeightScale);
+		terrainShader.setInt("u_heightMap", 0);
+		terrainShader.setFloat("u_heightTile", terrainHeightTile);
+		terrainShader.setInt("u_heightMap2", 1);
+		terrainShader.setFloat("u_heightTile2", terrainHeightTile2);
+		glActiveTexture(GL_TEXTURE0);
+		glBindTexture(GL_TEXTURE_2D, terrainHeightMap);
+		glActiveTexture(GL_TEXTURE1);
+		glBindTexture(GL_TEXTURE_2D, terrainHeightMap2);
+		glBindVertexArray(VAO);
+		glDrawArrays(GL_PATCHES, 0, vertices.size() / 3);
+		//Sawp Buffers
 		glfwSwapBuffers(window);
 		glfwPollEvents();
 	}
