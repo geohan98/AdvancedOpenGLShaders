@@ -71,10 +71,6 @@ float terrainHeightTile2 = 1.0;
 
 unsigned int VAO, VBO;
 
-//FrameBuffer
-unsigned int FBO;
-unsigned int ColourBuffer;
-unsigned int DepthBuffer;
 unsigned int FBO_VAO;
 unsigned int FBO_VBO;
 float quad[] = {
@@ -86,6 +82,14 @@ float quad[] = {
 		 1.0f, -1.0f,  1.0f, 0.0f,
 		 1.0f,  1.0f,  1.0f, 1.0f
 };
+
+//FrameBuffer
+unsigned int ColourFBO;
+unsigned int ColourBufferTexture;
+//Depth Buffer
+unsigned int RBO;
+unsigned int DepthFBO;
+unsigned int DepthBufferTexture;
 
 int main()
 {
@@ -111,12 +115,8 @@ int main()
 		std::cout << "Failed to initialize GLAD" << std::endl;
 		return -1;
 	}
-	glEnable(GL_DEPTH_TEST);
-	glEnable(GL_CULL_FACE);
-	glCullFace(GL_BACK);
 
-
-	//Skybox
+#pragma region Skybox
 	Model skyboxModel = Model("..\\resources\\cube.obj");
 	Shader skyboxShader("..\\shaders\\skybox\\skybox.vs", "..\\shaders\\skybox\\skybox.fs");
 	glGenTextures(1, &skyboxTex);
@@ -141,54 +141,68 @@ int main()
 	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
 	glBindTexture(GL_TEXTURE_CUBE_MAP, 0);
+#pragma endregion
 
-	//Water
+#pragma region Water
 	Model waterModel = Model("..\\resources\\hiPolyPlane.obj");
 	Shader waterShader = Shader("..\\shaders\\water\\water.vs", "..\\shaders\\water\\water.fs", "..\\shaders\\water\\water.gs", "..\\shaders\\water\\water.tcs", "..\\shaders\\water\\water.tes");
 	waterHeightMap = loadTexture("..\\resources\\textures\\water\\height.jpg");
 	waterHeightMap2 = loadTexture("..\\resources\\textures\\water\\height2.jpg");
-	//Terrain
+#pragma endregion
+
+#pragma region Terrain
 	Terrain terrain = Terrain(251, 251, 10);
 	std::vector<float> vertices = terrain.getVertices();
 	setVAO(vertices);
 	Shader terrainShader = Shader("..\\shaders\\terrain\\terrain.vs", "..\\shaders\\terrain\\terrain.fs", "..\\shaders\\terrain\\terrain.gs", "..\\shaders\\terrain\\terrain.tcs", "..\\shaders\\terrain\\terrain.tes");
 	terrainHeightMap = loadTexture("..\\resources\\textures\\Terrain\\height.jpg");
 	terrainHeightMap2 = loadTexture("..\\resources\\textures\\Terrain\\height2.jpg");
+#pragma endregion
 
-	//FrameBuffer
-	Shader postProcess = Shader("..\\Shaders\\SimplePostProcess\\SimplePostProcess.vs","..\\Shaders\\SimplePostProcess\\SimplePostProcess.fs");
-	glGenFramebuffers(1, &FBO);
-	glBindFramebuffer(GL_FRAMEBUFFER, FBO);
-
-	glGenTextures(1, &ColourBuffer);
-	glBindTexture(GL_TEXTURE_2D, ColourBuffer);
+#pragma region FrameBuffer
+	//Shader
+	Shader postProcess = Shader("..\\shaders\\SimplePostProcess\\SimplePostProcess.vs", "..\\shaders\\SimplePostProcess\\SimplePostProcess.fs");
+	//Frame Buffer Object
+	glGenFramebuffers(1, &ColourFBO);
+	glBindFramebuffer(GL_FRAMEBUFFER, ColourFBO);
+	//Frame Buffer Colour Texture
+	glGenTextures(1, &ColourBufferTexture);
+	glBindTexture(GL_TEXTURE_2D, ColourBufferTexture);
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, SCR_WIDTH, SCR_HEIGHT, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, ColourBuffer, 0);
-
+	//Bind Texture To Frame Buffer Object
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, ColourBufferTexture, 0);
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
-
+	//Frame Buffer Vertex Buffer
 	glGenBuffers(1, &FBO_VBO);
 	glBindBuffer(GL_ARRAY_BUFFER, FBO_VBO);
 	glBufferData(GL_ARRAY_BUFFER, sizeof(quad), &quad, GL_STATIC_DRAW);
-
+	//Frame Buffer Vertex Array
 	glGenVertexArrays(1, &FBO_VAO);
-	glBindVertexArray(FBO_VBO);
-	glBindBuffer(GL_ARRAY_BUFFER, FBO_VBO);
+	glBindVertexArray(FBO_VAO);
 	glEnableVertexAttribArray(0);
 	glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)0);
 	glEnableVertexAttribArray(1);
 	glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)(2 * sizeof(float)));
+#pragma endregion
 
+#pragma region Render Buffer
+	glBindFramebuffer(GL_FRAMEBUFFER, ColourFBO);
+	glGenRenderbuffers(1, &RBO);
+	glBindRenderbuffer(GL_RENDERBUFFER, RBO);
+	glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, SCR_WIDTH, SCR_HEIGHT);
+	glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, RBO);
 
+	if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
+	{
+		std::cout << "Failed to Create FrameBuffer" << std::endl;
+	}
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+#pragma endregion
 
 	while (!glfwWindowShouldClose(window))
 	{
-		glm::mat4 projection = glm::perspective(glm::radians(camera.Zoom), (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 5000.0f);
-		glm::mat4 view = camera.GetViewMatrix();
-		glm::mat4 skyboxView = glm::mat4(glm::mat3(camera.GetViewMatrix()));
-
 		//Timing
 		float currentFrame = glfwGetTime();
 		deltaTime = currentFrame - lastFrame;
@@ -197,14 +211,24 @@ int main()
 		processInput(window);
 		if (glfwGetKey(window, GLFW_KEY_P) == GLFW_PRESS)
 			camera.printCameraCoords();
-		//FrameBuffer
-		glBindFramebuffer(GL_FRAMEBUFFER, FBO);
+		//Camera
+		glm::mat4 projection = glm::perspective(glm::radians(camera.Zoom), (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 5000.0f);
+		glm::mat4 view = camera.GetViewMatrix();
+		glm::mat4 skyboxView = glm::mat4(glm::mat3(camera.GetViewMatrix()));
+		//Light & Shadows
+		glm::mat4 lightProjection = glm::ortho(-10.0f, 10.0f, -10.0f, 10.0f, 0.1f, 5000.0f);
+		glm::mat4 lightView = glm::lookAt(lightPos, glm::vec3(0.0f), glm::vec3(0.0, 1.0, 0.0));
+		glm::mat4 lightSpaceMatrix = lightProjection * lightView;
+		//Colour Render
+		glViewport(0, 0, SCR_WIDTH, SCR_HEIGHT);
+		//Colour FrameBuffer
+		glBindFramebuffer(GL_FRAMEBUFFER, ColourFBO);
 		glEnable(GL_DEPTH_TEST);
 		//Clear Buffer
-		//glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 		glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-		//Skybox
+
+#pragma region Skybox
 		glDepthMask(GL_FALSE);
 		skyboxShader.use();
 		skyboxShader.setMat4("u_view", skyboxView);
@@ -213,8 +237,10 @@ int main()
 		glBindTexture(GL_TEXTURE_CUBE_MAP, skyboxTex);
 		skyboxModel.Draw(skyboxShader);
 		glDepthMask(GL_TRUE);
-		//Water
-		glm::mat4 waterModelMat = glm::scale(glm::mat4(1.0), glm::vec3(waterScale, 1, waterScale));
+#pragma endregion
+
+#pragma region Water
+		glm::mat4	waterModelMat = glm::scale(glm::mat4(1.0), glm::vec3(waterScale, 1, waterScale));
 		waterShader.use();
 		waterShader.setMat4("u_model", waterModelMat);
 		waterShader.setMat4("u_view", view);
@@ -238,8 +264,9 @@ int main()
 		glActiveTexture(GL_TEXTURE1);
 		glBindTexture(GL_TEXTURE_2D, waterHeightMap2);
 		waterModel.DrawTess(waterShader);
-		//Terrain
-		glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+#pragma endregion
+
+#pragma region Terrain
 		glm::mat4 terrainModelMat = glm::translate(glm::mat4(1.0), glm::vec3(-1250, 60, -1250));
 		terrainShader.use();
 		terrainShader.setMat4("u_model", terrainModelMat);
@@ -262,26 +289,23 @@ int main()
 		glBindTexture(GL_TEXTURE_2D, terrainHeightMap2);
 		glBindVertexArray(VAO);
 		glDrawArrays(GL_PATCHES, 0, vertices.size() / 3);
+#pragma endregion
 		//FrameBuffer
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);
 		glDisable(GL_DEPTH_TEST);
 		//Clear Buffer
 		glClearColor(0.9f, 0.9f, 0.9f, 1.0f);
-		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+		glClear(GL_COLOR_BUFFER_BIT);
 		//Draw Quad
 		postProcess.use();
 		glActiveTexture(GL_TEXTURE0);
-		glBindTexture(GL_TEXTURE_2D, ColourBuffer);
 		glBindVertexArray(FBO_VAO);
-		glDrawArrays(GL_TRIANGLES, 0,6);
-
-
+		glBindTexture(GL_TEXTURE_2D, ColourBufferTexture);
+		glDrawArrays(GL_TRIANGLES, 0, 6);
 		//Sawp Buffers
 		glfwSwapBuffers(window);
 		glfwPollEvents();
 	}
-
-
 	glfwTerminate();
 	return 0;
 }
