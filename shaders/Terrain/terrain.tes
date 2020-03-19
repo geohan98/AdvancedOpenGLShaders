@@ -11,16 +11,20 @@ out vec3 fragPosES;
 out vec3 normalES;
 out vec2 texCoordsES;
 out float heightES;
+out vec4 fragPosLightSpaceES;
 
 uniform mat4 u_model;
 uniform mat4 u_view;
 uniform mat4 u_projection;
+uniform mat4 u_lightSpaceMatrix;
 
 uniform float u_heightScale;
 uniform sampler2D u_heightMap;
 uniform sampler2D u_heightMap2;
 uniform float u_heightTile;
 uniform float u_heightTile2;
+
+
 
 void main()
 {
@@ -37,6 +41,7 @@ void main()
 	
 	
 	
+	fragPosLightSpaceES = u_lightSpaceMatrix * vec4(fragPosES, 1.0);
 	heightES = fragPosES.y / u_heightScale;
 	gl_Position = u_projection * u_view * vec4(fragPosES, 1.0);
 	
