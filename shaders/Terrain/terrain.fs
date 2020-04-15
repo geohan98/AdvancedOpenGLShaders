@@ -15,8 +15,6 @@ uniform float u_specularStrength;
 uniform vec3 u_lightPos;
 uniform vec3 u_lightColor;
 
-uniform vec3 u_viewPos;
-
 uniform sampler2D u_shadowMap;
 
 float calcAlphaBetween(float x, float a, float b);
@@ -52,12 +50,7 @@ void main()
 	vec3 lightDir = normalize(u_lightPos - fragPosGS);
 	float diffuseDot = max(dot(normalGS,lightDir),0.0);
 	vec3 diffuse = u_diffuseStrength * u_lightColor * colour * diffuseDot;
-	//Speccular
-	vec3 viewDir = normalize(u_viewPos - fragPosGS);
-	vec3 reflectDir = reflect(-lightDir, normalGS);
-	float specDot = pow(max(dot(viewDir, reflectDir), 0.0), 16);
-	vec3 specular = u_specularStrength * specDot * u_lightColor;
-	//Shadow
+	//Shadow 
 	float shadow = ShadowCalculation(fragPosLightSpaceGS);
 	//Result 
 	FragColor = vec4(ambient + (1.0 - shadow) * diffuse,1.0);
@@ -74,7 +67,9 @@ float ShadowCalculation(vec4 fragPosLightSpace)
 	projCoords = projCoords * 0.5 + 0.5;
 	float closestDepth = texture(u_shadowMap, projCoords.xy).r;
 	float currentDepth = projCoords.z;
-	float shadow = currentDepth > closestDepth  ? 1.0 : 0.0;  
+	vec3 lightDir = normalize(u_lightPos - fragPosGS);
+	float bias = max(0.05 * (1.0 - dot(normalGS, lightDir)), 0.005); 
+	float shadow = currentDepth - bias > closestDepth  ? 1.0 : 0.0;  
 	return shadow;
 }
 

@@ -11,10 +11,12 @@ out vec3 fragPosES;
 out vec3 normalES;
 out vec2 texCoordsES;
 out float heightES;
+out vec4 fragPosLightSpaceES;
 
 uniform mat4 u_model;
 uniform mat4 u_view;
 uniform mat4 u_projection;
+uniform mat4 u_lightSpaceMatrix;
 
 uniform sampler2D u_heightMap;
 uniform sampler2D u_heightMap2;
@@ -32,9 +34,6 @@ void main()
 	texCoordsES.y = texCoordsES.y + u_time * 0.05 * u_speedY;
 	
 	float yPos = ((((texture(u_heightMap,texCoordsES * u_heightTile).r) * 2) - 1) + (((texture(u_heightMap2,texCoordsES * (u_heightTile2 / 2)).r) * 2) - 1)) / 2;
-	//float yPos = (((texture(u_heightMap,texCoordsES * u_heightTile).r) * 2) - 1) * u_waveHeight;
-	//float yPos = (((texture(u_heightMap2,texCoordsES * u_heightTile2).r) * 2) - 1) * u_waveHeight;
-	
 	
 	yPos = yPos * u_waveHeight;
 	
@@ -42,7 +41,7 @@ void main()
 	fragPosES.y = fragPosES.y + yPos;
 	
 	
-	
+	fragPosLightSpaceES = u_lightSpaceMatrix * vec4(fragPosES, 1.0);
 	heightES = fragPosES.y / u_waveHeight;
 	gl_Position = u_projection * u_view * vec4(fragPosES, 1.0);
 	

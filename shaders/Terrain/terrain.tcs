@@ -7,8 +7,6 @@ in vec2 texCoordsVS[];
 out vec3 fragPosTC[];
 out vec2 texCoordsTC[];
 
-uniform vec3 u_viewPos;
-
 void main()
 {
 	int tessLevel = 2;

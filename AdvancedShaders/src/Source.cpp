@@ -36,7 +36,7 @@ float lastX = SCR_WIDTH / 2.0f;
 float lastY = SCR_HEIGHT / 2.0f;
 bool firstMouse = true;
 //Lighting
-glm::vec3 lightPos = glm::vec3(0.0, 100.0, 0.0);
+glm::vec3 lightPos = glm::vec3(1, 1000.0, 1);
 glm::vec3 lightColour = glm::vec3(1.0, 1.0, 1.0);
 float ambientStrength = 0.1;
 float diffuseStrength = 1.0;
@@ -91,7 +91,7 @@ unsigned int RBO;
 
 //Depth Map
 unsigned int DepthMapFBO;
-const unsigned int SHADOW_WIDTH = 1024, SHADOW_HEIGHT = 1024;
+const unsigned int SHADOW_WIDTH = 2056, SHADOW_HEIGHT = 2056;
 unsigned int DepthBufferTexture;
 
 int main()
@@ -234,6 +234,7 @@ int main()
 
 #pragma region TestCube
 	Model cube("..\\resources\\debugCube.obj");
+	Shader light("..\\shaders\\Light\\Light.vs", "..\\shaders\\Light\\Light.fs");
 	Shader DepthShader("..\\shaders\\SimpleDepthShader\\SimpleDepthShader.vs", "..\\shaders\\SimpleDepthShader\\SimpleDepthShader.fs");
 #pragma endregion
 
@@ -252,7 +253,7 @@ int main()
 		glm::mat4 view = camera.GetViewMatrix();
 		glm::mat4 skyboxView = glm::mat4(glm::mat3(camera.GetViewMatrix()));
 		//Light & Shadows
-		glm::mat4 lightProjection = glm::ortho(-10.0f, 10.0f, -10.0f, 10.0f, 0.1f, 1000.0f);
+		glm::mat4 lightProjection = glm::ortho(-1500.0f, 1500.0f, -1500.0f, 1500.0f, 0.01f, 1250.0f);
 		glm::mat4 lightView = glm::lookAt(lightPos, glm::vec3(0.0f), glm::vec3(0.0, 1.0, 0.0));
 		glm::mat4 lightSpaceMatrix = lightProjection * lightView;
 
@@ -264,7 +265,7 @@ int main()
 		glClear(GL_DEPTH_BUFFER_BIT);
 
 #pragma region Terrain Depth Pass
-		//glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+		//Terrain
 		glm::mat4 terrainDepthModelMat = glm::translate(glm::mat4(1.0), glm::vec3(-1250, 60, -1250));
 		terrainDepthShader.use();
 		terrainDepthShader.setMat4("u_model", terrainDepthModelMat);
@@ -276,6 +277,14 @@ int main()
 		glBindTexture(GL_TEXTURE_2D, terrainHeightMap);
 		glBindVertexArray(VAO);
 		glDrawArrays(GL_PATCHES, 0, vertices.size() / 3);
+#pragma endregion
+#pragma region TestCube
+		glm::mat4 testCubeMat = glm::translate(glm::mat4(1.0), glm::vec3(0, 50, 0));
+		testCubeMat = glm::scale(testCubeMat, glm::vec3(50, 10, 50));
+		DepthShader.use();
+		DepthShader.setMat4("u_model", testCubeMat);
+		DepthShader.setMat4("u_lightSpaceMatrix", lightSpaceMatrix);
+		//cube.Draw(DepthShader);
 #pragma endregion
 
 
@@ -303,11 +312,13 @@ int main()
 #pragma endregion
 
 #pragma region Water
-		glm::mat4	waterModelMat = glm::scale(glm::mat4(1.0), glm::vec3(waterScale, 1, waterScale));
+		glm::mat4 waterModelMat = glm::scale(glm::mat4(1.0), glm::vec3(waterScale, 1, waterScale));
 		waterShader.use();
 		waterShader.setMat4("u_model", waterModelMat);
 		waterShader.setMat4("u_view", view);
 		waterShader.setMat4("u_projection", projection);
+		waterShader.setMat4("u_lightSpaceMatrix", lightSpaceMatrix);
+		waterShader.setInt("u_shadowMap", 2);
 		waterShader.setFloat("u_ambientStrength", ambientStrength);
 		waterShader.setFloat("u_diffuseStrength", diffuseStrength);
 		waterShader.setFloat("u_specularStrength", specularStrength);
@@ -326,7 +337,9 @@ int main()
 		glBindTexture(GL_TEXTURE_2D, waterHeightMap);
 		glActiveTexture(GL_TEXTURE1);
 		glBindTexture(GL_TEXTURE_2D, waterHeightMap2);
-		//waterModel.DrawTess(waterShader);
+		glActiveTexture(GL_TEXTURE2);
+		glBindTexture(GL_TEXTURE_2D, DepthBufferTexture);
+		waterModel.DrawTess(waterShader);
 #pragma endregion
 
 #pragma region Terrain
@@ -354,12 +367,20 @@ int main()
 		glDrawArrays(GL_PATCHES, 0, vertices.size() / 3);
 #pragma endregion
 
+#pragma region Cube
+		glm::mat4 lighPosMat = glm::translate(glm::mat4(1.0), lightPos);
+		light.use();
+		light.setMat4("u_model", lighPosMat);
+		light.setMat4("u_view", view);
+		light.setMat4("u_projection", projection);
+		cube.Draw(light);
+		light.setMat4("u_model", testCubeMat);
+		//cube.Draw(light);
+#pragma endregion
+
+
 		//Unbind Colour Buffer
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);
-
-		//Clear Buffer
-		//glClearColor(0.9f, 0.9f, 0.9f, 1.0f);
-		//glClear(GL_COLOR_BUFFER_BIT);
 
 		//Post Process Pass
 		glViewport(0, 0, SCR_WIDTH, SCR_HEIGHT);
@@ -367,8 +388,10 @@ int main()
 		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 		//Bind Post Process Shader
 		postProcess.use();
+		//depthPostProcess.use();
 		glActiveTexture(GL_TEXTURE0);
 		glBindVertexArray(FBO_VAO);
+		//glBindTexture(GL_TEXTURE_2D, DepthBufferTexture);
 		glBindTexture(GL_TEXTURE_2D, ColourBufferTexture);
 		glDrawArrays(GL_TRIANGLES, 0, 6);
 

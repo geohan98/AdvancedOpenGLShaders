@@ -14,8 +14,6 @@ out vec2 texCoordsGS;
 out float heightGS;
 out vec4 fragPosLightSpaceGS;
 
-uniform mat4 u_lightSpaceMatrix;
-
 void main()
 {
    for(int i = 0 ; i < 3; i++)

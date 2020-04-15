@@ -6,13 +6,13 @@ in vec3 fragPosES[];
 in vec3 normalES[];
 in vec2 texCoordsES[];
 in float heightES[];
+in vec4 fragPosLightSpaceES[];
 
 out vec3 fragPosGS;
 out vec3 normalGS;
 out vec2 texCoordsGS;
 out float heightGS;
-
-uniform vec3 u_viewPos;
+out vec4 fragPosLightSpaceGS;
 
 void main()
 {
@@ -23,6 +23,8 @@ void main()
 	normalGS = (normalES[0] + normalES[1] + normalES[2]) / 3;
 	texCoordsGS = texCoordsES[i];
 	heightGS = heightES[i];
+	fragPosLightSpaceGS = fragPosLightSpaceES[i];
+	
 	gl_Position = gl_in[i].gl_Position;
 	EmitVertex() ;
   }
